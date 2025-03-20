@@ -13,7 +13,7 @@ import { PaginatedResponse } from '../models/paginated-response.model';
 })
 export class RecipeService {
   private apiUrl =
-    'https://recipes-proyect-qov0j60ty-pincha1212s-projects.vercel.app/recipes';
+    'https://recipes-proyect-15qysm1q7-pincha1212s-projects.vercel.app/recipes';
 
   constructor(private http: HttpClient) {}
 
