@@ -136,9 +136,13 @@ export class RecipeFormComponent implements OnInit {
   }
 
   guardarReceta() {
-    const data: Omit<Recipe, '_id'> = { // ← Usa '_id'
-      title: this.form.value.title!,
-      description: this.form.value.description!,
+    if (this.form.invalid) {
+      alert('Completa todos los campos requeridos');
+      return;
+    }
+    const data: Omit<Recipe, '_id'> = {
+      title: this.form.value.title!.trim(),
+      description: this.form.value.description!.trim(),
       ingredients: this.form.value.ingredients!.split(',').map((i) => i.trim()),
       steps: this.form.value.steps!.split('\n').map((p) => p.trim()),
       categories: this.selectedCategories,

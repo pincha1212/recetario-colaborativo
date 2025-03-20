@@ -13,7 +13,7 @@ import { PaginatedResponse } from '../models/paginated-response.model';
 })
 export class RecipeService {
   private apiUrl =
-    'https://recipes-proyect-15qysm1q7-pincha1212s-projects.vercel.app/recipes';
+    'https://recipes-proyect-e31ju3h7o-pincha1212s-projects.vercel.app/recipes';
 
   constructor(private http: HttpClient) {}
 
@@ -72,7 +72,8 @@ export class RecipeService {
 
   // Actualizar receta existente
   updateRecipe(recipe: Recipe): Observable<Recipe> {
-    return this.http.put<Recipe>(`${this.apiUrl}/${recipe._id}`, recipe); // ← Usa _id de MongoDB
+    const { _id, ...cleanRecipe } = recipe;
+    return this.http.put<Recipe>(`${this.apiUrl}/${_id}`, cleanRecipe);
   }
 
   // Eliminar receta (mejor tipado)
