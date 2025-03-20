@@ -1,40 +1,42 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { RecipeService } from '../../services/recipe.service';
+import { Recipe } from '../../models/recipe.model';
 
 @Component({
   selector: 'app-recipe-detail',
   imports: [CommonModule],
   templateUrl: './recipe-detail.component.html',
-  styleUrl: './recipe-detail.component.css',
+  styleUrl: './recipe-detail.component.css'
 })
-export class RecipeDetailComponent {
-  route = inject(ActivatedRoute);
-  router = inject(Router);
-  http = inject(HttpClient);
-  receta = signal<any | null>(null);
+export class RecipeDetailComponent implements OnInit {
+  recipe: Recipe | null = null;
+  
+  // Inyecciones correctas
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private recipeService = inject(RecipeService);
 
-  constructor() {
+  ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.http.get(`http://localhost:3000/recipes/${id}`).subscribe({
-        next: (receta: any) => {
-          console.log('Receta recibida:', receta); // Depuración
-          this.receta.set(receta);
+      this.recipeService.getRecipe(id).subscribe({
+        next: (recipe) => {
+          console.log('Receta cargada:', recipe);
+          this.recipe = recipe;
         },
-        error: (err) => console.error('Error al cargar receta:', err),
+        error: (err) => console.error('Error cargando receta:', err)
       });
     }
   }
 
-editarReceta() {
-  const id = this.route.snapshot.paramMap.get('id'); // Obtener ID de la ruta actual
-  this.router.navigate(['/recipes/edit', id]); // Navegar usando parámetros de ruta
-}
+  editarReceta() {
+    const id = this.route.snapshot.paramMap.get('id');
+    this.router.navigate(['/recipes/edit', id]);
+  }
 
   volver() {
     this.router.navigate(['/recipes']);
   }
-
 }

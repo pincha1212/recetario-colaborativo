@@ -14,6 +14,7 @@ import { Router, ActivatedRoute, Params } from '@angular/router';
 import { Observable } from 'rxjs';
 import { ChangeDetectorRef } from '@angular/core';
 import { debounceTime } from 'rxjs/operators';
+import { Recipe } from '../../models/recipe.model';
 
 @Component({
   selector: 'app-recipe-form',
@@ -21,9 +22,8 @@ import { debounceTime } from 'rxjs/operators';
   templateUrl: './recipe-form.component.html',
   styleUrl: './recipe-form.component.css',
 })
-export class RecipeFormComponent {
+export class RecipeFormComponent implements OnInit {
   newCategory = '';
-  http = inject(HttpClient);
   router = inject(Router);
   route = inject(ActivatedRoute);
   fb = inject(FormBuilder);
@@ -41,6 +41,8 @@ export class RecipeFormComponent {
     steps: ['', Validators.required],
   });
 
+  private recipeService = inject(RecipeService);
+
   constructor(private cdRef: ChangeDetectorRef) {}
 
   ngOnInit() {
@@ -57,19 +59,14 @@ export class RecipeFormComponent {
       });
 
     // Cargar categorías primero
-    this.http
-      .get<string[]>('http://localhost:3000/recipes/categories')
-      .subscribe({
-        next: (cats) => {
-          this.allCategories = cats;
-
-          // Si estamos editando, cargar la receta después de tener las categorías
-          if (this.editando) {
-            this.cargarRecetaParaEdicion();
-          }
-        },
-        error: (err) => console.error('Error cargando categorías:', err),
-      });
+    this.recipeService.getCategories().subscribe({
+      next: (cats: string[]) => {
+        // ← Agrega el tipo aquí
+        this.allCategories = cats;
+        if (this.editando && this.id) this.cargarRecetaParaEdicion();
+      },
+      error: (err) => console.error('Error cargando categorías:', err),
+    });
   }
 
   // En recipe-form.component.ts
@@ -107,14 +104,6 @@ export class RecipeFormComponent {
     );
   }
 
-  private loadCategories() {
-    this.http
-      .get<string[]>('http://localhost:3000/categories')
-      .subscribe((cats) => {
-        this.allCategories = cats;
-      });
-  }
-
   toggleCategory(category: string) {
     this.selectedCategories = this.selectedCategories.includes(category)
       ? this.selectedCategories.filter((c) => c !== category)
@@ -123,10 +112,8 @@ export class RecipeFormComponent {
     this.updateRelatedCategories(); // Actualizar tras cada cambio
   }
 
-  
-
   private cargarRecetaParaEdicion() {
-    this.http.get<any>(`http://localhost:3000/recipes/${this.id}`).subscribe({
+    this.recipeService.getRecipe(this.id!).subscribe({
       next: (recipe) => {
         // Añadir categorías únicas manteniendo el orden original
         recipe.categories.forEach((cat: string) => {
@@ -140,8 +127,8 @@ export class RecipeFormComponent {
         this.form.setValue({
           title: recipe.title,
           description: recipe.description,
-          ingredients: recipe.ingredients.join(', '), 
-          steps: recipe.steps.join('\n'), 
+          ingredients: recipe.ingredients.join(', '),
+          steps: recipe.steps.join('\n'),
         });
       },
       error: (err) => console.error('Error cargando receta:', err),
@@ -149,22 +136,21 @@ export class RecipeFormComponent {
   }
 
   guardarReceta() {
-    const data = {
+    const data: Omit<Recipe, '_id'> = { // ← Usa '_id'
       title: this.form.value.title!,
-      description: this.form.value.description!, // Incluir description
+      description: this.form.value.description!,
       ingredients: this.form.value.ingredients!.split(',').map((i) => i.trim()),
       steps: this.form.value.steps!.split('\n').map((p) => p.trim()),
       categories: this.selectedCategories,
     };
 
     if (this.editando && this.id) {
-      this.http
-        .put(`http://localhost:3000/recipes/${this.id}`, data)
-        .subscribe(() => {
-          this.router.navigate(['/recipes']);
-        });
+      const recipeToUpdate: Recipe = { ...data, _id: this.id }; // ← Usa _id
+      this.recipeService.updateRecipe(recipeToUpdate).subscribe(() => {
+        this.router.navigate(['/recipes']);
+      });
     } else {
-      this.http.post('http://localhost:3000/recipes', data).subscribe(() => {
+      this.recipeService.addRecipe(data).subscribe(() => {
         this.router.navigate(['/recipes']);
       });
     }
