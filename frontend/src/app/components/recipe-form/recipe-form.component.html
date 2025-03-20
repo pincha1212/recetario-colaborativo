@@ -1,0 +1,84 @@
+<div class="form-container">
+  <h2>{{ editando ? '✏️ Editar Receta' : '🍳 Nueva Receta' }}</h2>
+
+  <form [formGroup]="form" (ngSubmit)="guardarReceta()">
+    <!-- Sección de título y descripción -->
+    <div class="form-group">
+      <label>Título</label>
+      <input type="text" formControlName="title">
+      <div *ngIf="form.get('title')?.errors" class="error-message">
+        <span *ngIf="form.get('title')?.hasError('required')">Campo requerido</span>
+        <span *ngIf="form.get('title')?.hasError('minlength')">Mínimo 3 caracteres</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <textarea formControlName="description" rows="3" placeholder="Breve descripción de la receta"></textarea>
+    </div>
+
+    <!-- Sección de ingredientes y pasos -->
+    <div class="columns">
+      <div class="form-group">
+        <label>Ingredientes</label>
+        <textarea formControlName="ingredients" rows="6"
+          placeholder="Separados por comas:&#10;- Arroz&#10;- Azafrán&#10;- Mariscos"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Pasos de preparación</label>
+        <textarea formControlName="steps" rows="6"
+          placeholder="Uno por línea:&#10;1. Calentar el agua&#10;2. Añadir arroz"></textarea>
+      </div>
+    </div>
+
+    <!-- Sección de categorías actualizada -->
+    <section class="filters-section">
+      <div class="filters-header">
+        <h3 class="filter-title">Categorías</h3>
+
+        <!-- Input de búsqueda/creación -->
+        <div class="add-category">
+          <input type="text" [(ngModel)]="newCategory" [ngModelOptions]="{standalone: true}"
+            placeholder="Buscar o crear categoría" (keyup)="onCategorySearch()" (keyup.enter)="addNewCategory()" />
+          <button type="button" class="add-btn" (click)="addNewCategory()">+</button>
+
+          <!-- Sugerencias de búsqueda -->
+          <div class="suggestions-box" *ngIf="filteredCategories.length > 0">
+            <div class="suggestions-container">
+              <div *ngFor="let cat of filteredCategories" class="suggestion-item">
+                {{ cat }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tags de categorías seleccionadas (se mantiene igual) -->
+      <div class="selected-categories" *ngIf="selectedCategories.length > 0">
+        <span class="selected-tag" *ngFor="let cat of selectedCategories">
+          {{ cat }}
+          <span class="remove-tag" (click)="toggleCategory(cat)">&times;</span>
+        </span>
+      </div>
+
+      <!-- Grid dinámico -->
+      <div class="categories-panel" [class.active]="contextualCategories.length > 0">
+        <div class="categories-grid">
+          <button *ngFor="let cat of contextualCategories" class="category-btn" (click)="toggleCategory(cat)">
+            {{ cat }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Botones de acción -->
+    <div class="form-actions">
+      <button type="submit" class="submit-btn">
+        {{ editando ? 'Actualizar Receta' : 'Guardar Receta' }}
+      </button>
+      <button type="button" class="cancel-btn" (click)="volver()">
+        Cancelar
+      </button>
+    </div>
+  </form>
+</div>

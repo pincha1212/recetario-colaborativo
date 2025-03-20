@@ -1,0 +1,41 @@
+<!-- recipe-detail.component.html -->
+<div *ngIf="receta()" class="recipe-detail-container">
+  <h2>{{ receta().title }}</h2>
+
+  <div class="description-section">
+    <h4 class="section-subtitle">📝 Descripción:</h4>
+    <p class="recipe-description">{{ receta().description }}</p>
+  </div>
+
+  <div class="ingredients-section">
+    <h4 class="section-subtitle">🛒 Ingredientes:</h4>
+    <ul class="ingredients-list">
+      <li *ngFor="let ing of receta().ingredients" class="ingredient-item">
+        {{ ing }}
+      </li>
+    </ul>
+  </div>
+
+  <div class="steps-section">
+    <h4 class="section-subtitle">👩🍳 Pasos:</h4>
+    <ol class="steps-list">
+      <li *ngFor="let paso of receta().steps" class="step-item">
+        {{ paso }}
+      </li>
+    </ol>
+  </div>
+
+  <div class="categories-section">
+    <h4 class="section-subtitle">🏷️ Categorías:</h4>
+    <div class="categories-container">
+      <span *ngFor="let cat of receta().categories" class="category-tag">
+        {{ cat | titlecase }}
+      </span>
+    </div>
+  </div>
+
+  <div class="action-buttons">
+    <button class="edit-btn" (click)="editarReceta()">✏️ Editar Receta</button>
+    <button class="back-btn" (click)="volver()">⬅️ Volver al Listado</button>
+  </div>
+</div>

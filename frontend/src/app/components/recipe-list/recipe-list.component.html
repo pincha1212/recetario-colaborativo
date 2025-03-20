@@ -1,0 +1,132 @@
+<!-- recipe-list.component.html -->
+<div class="recipe-container">
+  <!-- Header Section -->
+  <header class="header-section">
+    <h2 class="section-title">📖 Recetario</h2>
+
+    <div class="header-actions">
+      <button class="new-recipe-btn" routerLink="/recipes/new">
+        ➕ Nueva Receta
+      </button>
+    </div>
+  </header>
+
+  <!-- Sección de Filtros -->
+  <section class="filters-section">
+    <div class="filters-header">
+      <!-- Campo de búsqueda -->
+      <div class="search-container">
+        <div class="search-bar">
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            placeholder="Buscar recetas..."
+            (keyup.enter)="onSearch()"
+          />
+          <button (click)="onSearch()">🔍</button>
+        </div>
+      </div>
+
+      <button class="filter-toggle-btn" (click)="toggleFilterPanel()">
+        {{ showFilters ? 'Ocultar' : 'Filtrar' }} 
+        ({{ selectedCategories.length }})
+        <span class="toggle-icon">{{ showFilters ? '▲' : '▼' }}</span>
+      </button>
+      
+      <div class="selected-categories" *ngIf="selectedCategories.length > 0">
+        <span class="selected-tag" *ngFor="let cat of selectedCategories">
+          {{ cat }}
+          <span class="remove-tag" (click)="removeCategory(cat)">&times;</span>
+        </span>
+        <button class="clear-all-btn" (click)="clearFilters()">Limpiar</button>
+      </div>
+    </div>
+
+    <div class="categories-panel" [class.active]="showFilters">
+      <div class="categories-grid">
+        <button *ngFor="let cat of allCategories" 
+                class="category-btn"
+                [class.selected]="selectedCategories.includes(cat)"
+                (click)="toggleCategoryFilter(cat)">
+          {{ cat }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Loading State -->
+  <div *ngIf="loading()" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Cargando recetas...</p>
+  </div>
+
+  <!-- Muestra mensaje si no hay resultados -->
+  <div *ngIf="!loading() && recetas().length === 0" class="no-results">
+    🕵️ No se encontraron recetas con esos criterios
+  </div>
+
+  <!-- Listado de Recetas -->
+  <section class="recipes-grid">
+    <ul class="recipe-list">
+      <li *ngFor="let recipe of recetas()" class="recipe-card">
+        <div class="card-content">
+          <div class="card-header">
+            <h3 class="recipe-title">{{ recipe.title }}</h3>
+          </div>
+
+          <p class="recipe-description">{{ recipe.description | slice:0:120 }}...</p>
+
+          <div class="recipe-categories">
+            <span *ngFor="let category of recipe.categories" class="category-tag"
+              [class]="'category-' + category.toLowerCase()">
+              {{ category }}
+            </span>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button (click)="verReceta(recipe._id!)" class="action-btn view">
+            <span class="icon">👁️</span> Ver
+          </button>
+          <button [routerLink]="['/recipes/edit', recipe._id]" class="action-btn edit">
+            <span class="icon">✏️</span> Editar
+          </button>
+          <button (click)="eliminarReceta(recipe._id!)" class="action-btn delete">
+            <span class="icon">🗑️</span>
+          </button>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Paginación -->
+  <footer class="pagination-section">
+    <div class="pagination-controls">
+      <div class="pagination-info">
+        Mostrando {{ recetas().length }} de {{ totalRecipes() }} recetas
+      </div>
+
+      <div class="pagination-navigation">
+        <button (click)="prevPage()" [disabled]="currentPage() === 1" class="pagination-arrow">
+          ◀
+        </button>
+
+        <span class="page-indicator">
+          Página {{ currentPage() }} de {{ totalPages() }}
+        </span>
+
+        <button (click)="nextPage()" [disabled]="currentPage() === totalPages()" class="pagination-arrow">
+          ▶
+        </button>
+      </div>
+
+      <div class="page-size-selector">
+        <select (change)="changePageSize($any($event.target).value)" class="custom-select">
+          <option value="6">6 por página</option>
+          <option value="12">12 por página</option>
+          <option value="24">24 por página</option>
+        </select>
+      </div>
+    </div>
+  </footer>
+</div>
