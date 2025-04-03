@@ -35,10 +35,10 @@ export class RecipeFormComponent implements OnInit {
   contextualCategories: string[] = [];
 
   form = this.fb.group({
-    title: ['', [Validators.required, Validators.minLength(3)]],
-    description: ['', [Validators.required, Validators.maxLength(200)]],
-    ingredients: ['', Validators.required],
-    steps: ['', Validators.required],
+    title: ['', [Validators.minLength(3)]],
+    description: ['', [Validators.minLength(10)]],
+    ingredients: [''],
+    steps: [''],
   });
 
   private recipeService = inject(RecipeService);
@@ -136,26 +136,60 @@ export class RecipeFormComponent implements OnInit {
   }
 
   guardarReceta() {
-    if (this.form.invalid) {
-      alert('Completa todos los campos requeridos');
-      return;
-    }
-    const data: Omit<Recipe, '_id'> = {
-      title: this.form.value.title!.trim(),
-      description: this.form.value.description!.trim(),
-      ingredients: this.form.value.ingredients!.split(',').map((i) => i.trim()),
-      steps: this.form.value.steps!.split('\n').map((p) => p.trim()),
-      categories: this.selectedCategories,
-    };
+    const updateData: Partial<Recipe> = {};
+    const form = this.form;
 
+    // Detectar cambios solo en campos modificados (Dirty)
+    if (form.get('title')?.dirty) {
+      updateData.title = form.value.title?.trim();
+    }
+
+    if (form.get('description')?.dirty) {
+      updateData.description = form.value.description?.trim();
+    }
+
+    if (form.get('ingredients')?.dirty) {
+      updateData.ingredients = form.value.ingredients
+        ?.split(',')
+        .map((i) => i.trim());
+    }
+
+    if (form.get('steps')?.dirty) {
+      updateData.steps = form.value.steps?.split('\n').map((p) => p.trim());
+    }
+
+    // Siempre incluir categorías (asumiendo que pueden cambiar)
+    updateData.categories = this.selectedCategories;
+
+    // Validar si hay datos para actualizar
     if (this.editando && this.id) {
-      const recipeToUpdate: Recipe = { ...data, _id: this.id }; // ← Usa _id
-      this.recipeService.updateRecipe(recipeToUpdate).subscribe(() => {
-        this.router.navigate(['/recipes']);
+      if (Object.keys(updateData).length === 0) {
+        alert('No hay cambios para guardar');
+        return;
+      }
+
+      const recipeToUpdate: Recipe = {
+        ...updateData,
+        _id: this.id,
+      } as Recipe;
+
+      this.recipeService.updateRecipe(recipeToUpdate).subscribe({
+        next: () => this.router.navigate(['/recipes']),
+        error: (err) => alert('Error: ' + err.message),
       });
     } else {
-      this.recipeService.addRecipe(data).subscribe(() => {
-        this.router.navigate(['/recipes']);
+      // Lógica para nueva receta (original)
+      const newRecipe: Omit<Recipe, '_id'> = {
+        title: form.value.title!.trim(),
+        description: form.value.description!.trim(),
+        ingredients: form.value.ingredients!.split(',').map((i) => i.trim()),
+        steps: form.value.steps!.split('\n').map((p) => p.trim()),
+        categories: this.selectedCategories,
+      };
+
+      this.recipeService.addRecipe(newRecipe).subscribe({
+        next: () => this.router.navigate(['/recipes']),
+        error: (err) => alert('Error: ' + err.message),
       });
     }
   }
