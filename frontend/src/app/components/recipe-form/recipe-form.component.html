@@ -39,7 +39,7 @@
         <!-- Input de búsqueda/creación -->
         <div class="add-category">
           <input type="text" [(ngModel)]="newCategory" [ngModelOptions]="{standalone: true}"
-            placeholder="Buscar o crear categoría" (keyup)="onCategorySearch()" (keyup.enter)="addNewCategory()" />
+            placeholder="Buscar o crear categoría" (keyup)="onCategorySearch()" (keydown.enter)="handleCategoryEnter($event)" />
           <button type="button" class="add-btn" (click)="addNewCategory()">+</button>
 
           <!-- Sugerencias de búsqueda -->
@@ -64,7 +64,7 @@
       <!-- Grid dinámico -->
       <div class="categories-panel" [class.active]="contextualCategories.length > 0">
         <div class="categories-grid">
-          <button *ngFor="let cat of contextualCategories" class="category-btn" (click)="toggleCategory(cat)">
+          <button *ngFor="let cat of contextualCategories" class="category-btn" type="button" (click)="toggleCategory(cat)">
             {{ cat }}
           </button>
         </div>

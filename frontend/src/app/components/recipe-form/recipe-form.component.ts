@@ -1,18 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import {
   ReactiveFormsModule,
-  FormArray,
-  Validators,
   FormBuilder,
   FormGroup,
   FormsModule,
+  Validators,
 } from '@angular/forms';
 import { RecipeService } from '../../services/recipe.service';
-import { HttpClient } from '@angular/common/http';
-import { Router, ActivatedRoute, Params } from '@angular/router';
-import { Observable } from 'rxjs';
-import { ChangeDetectorRef } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { Recipe } from '../../models/recipe.model';
 
@@ -34,6 +31,9 @@ export class RecipeFormComponent implements OnInit {
   filteredCategories: string[] = [];
   contextualCategories: string[] = [];
 
+  // Subject para manejar cambios en categorías
+  private categoryChanges = new Subject<void>();
+
   form = this.fb.group({
     title: ['', [Validators.minLength(3)]],
     description: ['', [Validators.minLength(10)]],
@@ -46,22 +46,17 @@ export class RecipeFormComponent implements OnInit {
   constructor(private cdRef: ChangeDetectorRef) {}
 
   ngOnInit() {
-    // Obtener el ID inmediatamente del snapshot
     this.id = this.route.snapshot.params['id'];
     this.editando = !!this.id;
 
-    this.form.valueChanges
-      .pipe(
-        debounceTime(300) // Optimiza el rendimiento
-      )
-      .subscribe(() => {
-        this.updateRelatedCategories();
-      });
+    // Suscripción a cambios en categorías
+    this.categoryChanges.pipe(debounceTime(300)).subscribe(() => {
+      this.updateRelatedCategories();
+    });
 
-    // Cargar categorías primero
+    // Cargar categorías
     this.recipeService.getCategories().subscribe({
       next: (cats: string[]) => {
-        // ← Agrega el tipo aquí
         this.allCategories = cats;
         if (this.editando && this.id) this.cargarRecetaParaEdicion();
       },
@@ -69,7 +64,6 @@ export class RecipeFormComponent implements OnInit {
     });
   }
 
-  // En recipe-form.component.ts
   private updateRelatedCategories() {
     const searchTerms = [
       this.form.value.title || '',
@@ -80,7 +74,6 @@ export class RecipeFormComponent implements OnInit {
 
     const normalizedTerms = this.normalizeText(searchTerms);
 
-    // Filtrar categorías no seleccionadas + coincidencias
     this.contextualCategories = this.allCategories.filter((cat) => {
       return (
         !this.selectedCategories.includes(cat) &&
@@ -97,7 +90,6 @@ export class RecipeFormComponent implements OnInit {
       .toLowerCase();
   }
 
-  // Añadir esta propiedad computada
   get unselectedCategories(): string[] {
     return this.allCategories.filter(
       (cat) => !this.selectedCategories.includes(cat)
@@ -109,13 +101,14 @@ export class RecipeFormComponent implements OnInit {
       ? this.selectedCategories.filter((c) => c !== category)
       : [...this.selectedCategories, category];
 
-    this.updateRelatedCategories(); // Actualizar tras cada cambio
+    this.categoryChanges.next();
+    this.form.markAsPristine(); // Mantener el formulario como "no modificado"
+    this.cdRef.detectChanges();
   }
 
   private cargarRecetaParaEdicion() {
     this.recipeService.getRecipe(this.id!).subscribe({
       next: (recipe) => {
-        // Añadir categorías únicas manteniendo el orden original
         recipe.categories.forEach((cat: string) => {
           if (!this.allCategories.includes(cat.toLowerCase())) {
             this.allCategories = [...this.allCategories, cat];
@@ -124,7 +117,7 @@ export class RecipeFormComponent implements OnInit {
 
         this.selectedCategories = [...recipe.categories];
 
-        this.form.setValue({
+        this.form.patchValue({
           title: recipe.title,
           description: recipe.description,
           ingredients: recipe.ingredients.join(', '),
@@ -139,7 +132,6 @@ export class RecipeFormComponent implements OnInit {
     const updateData: Partial<Recipe> = {};
     const form = this.form;
 
-    // Detectar cambios solo en campos modificados (Dirty)
     if (form.get('title')?.dirty) {
       updateData.title = form.value.title?.trim();
     }
@@ -158,10 +150,8 @@ export class RecipeFormComponent implements OnInit {
       updateData.steps = form.value.steps?.split('\n').map((p) => p.trim());
     }
 
-    // Siempre incluir categorías (asumiendo que pueden cambiar)
     updateData.categories = this.selectedCategories;
 
-    // Validar si hay datos para actualizar
     if (this.editando && this.id) {
       if (Object.keys(updateData).length === 0) {
         alert('No hay cambios para guardar');
@@ -178,7 +168,6 @@ export class RecipeFormComponent implements OnInit {
         error: (err) => alert('Error: ' + err.message),
       });
     } else {
-      // Lógica para nueva receta (original)
       const newRecipe: Omit<Recipe, '_id'> = {
         title: form.value.title!.trim(),
         description: form.value.description!.trim(),
@@ -200,21 +189,32 @@ export class RecipeFormComponent implements OnInit {
 
   addNewCategory() {
     const newCat = this.newCategory.trim().toLowerCase();
-    if (newCat) {
-      // Solo añadir si no existe
-      if (!this.allCategories.includes(newCat)) {
-        this.allCategories = [...this.allCategories, newCat];
-      }
-      // Añadir a seleccionadas
-      if (!this.selectedCategories.includes(newCat)) {
-        this.selectedCategories = [...this.selectedCategories, newCat];
-      }
-      this.newCategory = '';
-      this.filteredCategories = []; // Limpiar sugerencias
+
+    if (!newCat) return;
+
+    // Agregar a todas las categorías si no existe
+    if (!this.allCategories.includes(newCat)) {
+      this.allCategories = [...this.allCategories, newCat];
     }
+
+    // Agregar a seleccionadas si no está
+    if (!this.selectedCategories.includes(newCat)) {
+      this.selectedCategories = [...this.selectedCategories, newCat];
+    }
+
+    // Resetear estado
+    this.newCategory = '';
+    this.filteredCategories = [];
+    this.categoryChanges.next(); // Actualizar grid dinámico
   }
 
-  // Método para filtrar categorías
+  // Cambia la firma del método
+  handleCategoryEnter(event: Event) {
+    const keyboardEvent = event as KeyboardEvent;
+    keyboardEvent.preventDefault();
+    keyboardEvent.stopPropagation();
+    this.addNewCategory();
+  }
   onCategorySearch(): void {
     const searchTerm = this.newCategory.trim().toLowerCase();
 
@@ -228,10 +228,9 @@ export class RecipeFormComponent implements OnInit {
     );
   }
 
-  // Seleccionar categoría existente
   selectCategory(category: string): void {
     this.toggleCategory(category);
-    this.newCategory = ''; // Limpiar input
-    this.filteredCategories = []; // Ocultar sugerencias
+    this.newCategory = '';
+    this.filteredCategories = [];
   }
 }
