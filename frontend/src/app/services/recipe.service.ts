@@ -60,11 +60,31 @@ export class RecipeService {
   }
 
   // Agregar nueva receta
-  addRecipe(recipe: Omit<Recipe, '_id'>): Observable<Recipe> {
-    // Eliminar cualquier _id residual del objeto
-    const { _id, ...cleanRecipe } = recipe as any;
-    return this.http.post<Recipe>(`${this.apiUrl}/recipes`, recipe);
+addRecipe(recipe: Omit<Recipe, '_id'>): Observable<Recipe> {
+  // Limpieza profunda del objeto
+  const cleanRecipe: Omit<Recipe, '_id'> = {
+    title: recipe.title.trim(),
+    description: recipe.description.trim(),
+    ingredients: [...recipe.ingredients], // Copia fresca del array
+    steps: [...recipe.steps], // Copia fresca del array
+    categories: [...recipe.categories], // Copia fresca del array
+    // Eliminar cualquier propiedad residual
+    ...(recipe.imageUrls && { imageUrls: [...recipe.imageUrls] }),
+    ...(recipe.authorId && { authorId: recipe.authorId })
+  };
+
+  // Validación final para eliminar _id
+  if ('_id' in cleanRecipe) {
+    delete (cleanRecipe as any)._id;
   }
+
+  return this.http.post<Recipe>(`${this.apiUrl}/recipes`, cleanRecipe).pipe(
+    catchError(error => {
+      console.error('Error en addRecipe:', error);
+      return throwError(() => new Error('Error al crear la receta'));
+    })
+  );
+}
 
   // Actualizar receta existente
   updateRecipe(recipe: Recipe): Observable<Recipe> {
