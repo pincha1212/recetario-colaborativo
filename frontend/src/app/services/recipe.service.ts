@@ -13,7 +13,7 @@ import { PaginatedResponse } from '../models/paginated-response.model';
 })
 export class RecipeService {
   private apiUrl =
-    'https://recipes-proyect-85fqbg0f5-pincha1212s-projects.vercel.app/recipes';
+    'https://recipes-proyect-91vdnppza-pincha1212s-projects.vercel.app';
 
   constructor(private http: HttpClient) {}
 
@@ -36,20 +36,20 @@ export class RecipeService {
       httpParams = httpParams.set('categories', params.categories.join(','));
     }
 
-    return this.http.get<PaginatedResponse>(this.apiUrl, {
-      params: httpParams,
+    return this.http.get<PaginatedResponse>(`${this.apiUrl}/recipes`, {
+      params,
     });
   }
 
   // Obtener receta por ID con tipado seguro
   getRecipe(id: string): Observable<Recipe> {
     // ← Cambia number a string
-    return this.http.get<Recipe>(`${this.apiUrl}/${id}`);
+    return this.http.get<Recipe>(`${this.apiUrl}/recipes/${id}`);
   }
 
   // ✅ Correcto
   getCategories(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/categories`).pipe(
+    return this.http.get<string[]>(`${this.apiUrl}/recipes/categories`).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('Error cargando categorías:', error);
         return throwError(
@@ -61,25 +61,21 @@ export class RecipeService {
 
   // Agregar nueva receta
   addRecipe(recipe: Omit<Recipe, '_id'>): Observable<Recipe> {
-    return this.http.post<Recipe>(this.apiUrl, {
-      title: recipe.title,
-      description: recipe.description,
-      ingredients: recipe.ingredients,
-      steps: recipe.steps,
-      categories: recipe.categories,
-    });
+    // Eliminar cualquier _id residual del objeto
+    const { _id, ...cleanRecipe } = recipe as any;
+    return this.http.post<Recipe>(`${this.apiUrl}/recipes`, recipe);
   }
 
   // Actualizar receta existente
   updateRecipe(recipe: Recipe): Observable<Recipe> {
     const { _id, ...cleanRecipe } = recipe;
-    return this.http.put<Recipe>(`${this.apiUrl}/${_id}`, cleanRecipe);
+    return this.http.put<Recipe>(`${this.apiUrl}/recipes/${_id}`, cleanRecipe);
   }
 
   // Eliminar receta (mejor tipado)
   deleteRecipe(id: string): Observable<void> {
     // ← Cambia number a string
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/recipes/${id}`);
   }
 
   // Manejo centralizado de errores

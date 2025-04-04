@@ -129,57 +129,87 @@ export class RecipeFormComponent implements OnInit {
   }
 
   guardarReceta() {
-    const updateData: Partial<Recipe> = {};
-    const form = this.form;
-
-    if (form.get('title')?.dirty) {
-      updateData.title = form.value.title?.trim();
+    // Validar formulario
+    if (this.form.invalid && !this.editando) {
+      alert('Completa los campos requeridos');
+      return;
     }
 
-    if (form.get('description')?.dirty) {
-      updateData.description = form.value.description?.trim();
+    // Preparar datos
+    const formData = this.form.value;
+    const recipeData: Partial<Recipe> = {};
+
+    // Detectar cambios en edición
+    if (this.editando) {
+      if (this.form.get('title')?.dirty) {
+        recipeData.title = formData.title?.trim();
+      }
+      if (this.form.get('description')?.dirty) {
+        recipeData.description = formData.description?.trim();
+      }
+      if (this.form.get('ingredients')?.dirty) {
+        recipeData.ingredients = formData.ingredients
+          ?.split(',')
+          .map((i) => i.trim());
+      }
+      if (this.form.get('steps')?.dirty) {
+        recipeData.steps = formData.steps?.split('\n').map((p) => p.trim());
+      }
+      recipeData.categories = this.selectedCategories;
+    } else {
+      // Validar campos obligatorios para nueva receta
+      if (!formData.title?.trim() || !formData.description?.trim()) {
+        alert('Título y descripción son requeridos');
+        return;
+      }
+
+      recipeData.title = formData.title.trim();
+      recipeData.description = formData.description.trim();
+      recipeData.ingredients =
+        formData.ingredients?.split(',').map((i) => i.trim()) || [];
+      recipeData.steps = formData.steps?.split('\n').map((p) => p.trim()) || [];
+      recipeData.categories = this.selectedCategories;
     }
 
-    if (form.get('ingredients')?.dirty) {
-      updateData.ingredients = form.value.ingredients
-        ?.split(',')
-        .map((i) => i.trim());
-    }
-
-    if (form.get('steps')?.dirty) {
-      updateData.steps = form.value.steps?.split('\n').map((p) => p.trim());
-    }
-
-    updateData.categories = this.selectedCategories;
-
+    // Lógica de guardado
     if (this.editando && this.id) {
-      if (Object.keys(updateData).length === 0) {
+      // Edición
+      if (Object.keys(recipeData).length === 0) {
         alert('No hay cambios para guardar');
         return;
       }
 
-      const recipeToUpdate: Recipe = {
-        ...updateData,
+      const updatePayload: Recipe = {
+        ...recipeData,
         _id: this.id,
       } as Recipe;
 
-      this.recipeService.updateRecipe(recipeToUpdate).subscribe({
-        next: () => this.router.navigate(['/recipes']),
-        error: (err) => alert('Error: ' + err.message),
+      this.recipeService.updateRecipe(updatePayload).subscribe({
+        next: (updatedRecipe) => {
+          console.log('Receta actualizada:', updatedRecipe);
+          this.router.navigate(['/recipes']);
+        },
+        error: (err) => {
+          console.error('Error actualizando:', err);
+          alert('Error al guardar cambios');
+        },
       });
     } else {
-      const newRecipe: Omit<Recipe, '_id'> = {
-        title: form.value.title!.trim(),
-        description: form.value.description!.trim(),
-        ingredients: form.value.ingredients!.split(',').map((i) => i.trim()),
-        steps: form.value.steps!.split('\n').map((p) => p.trim()),
-        categories: this.selectedCategories,
-      };
-
-      this.recipeService.addRecipe(newRecipe).subscribe({
-        next: () => this.router.navigate(['/recipes']),
-        error: (err) => alert('Error: ' + err.message),
-      });
+      // Creación
+      this.recipeService
+        .addRecipe(recipeData as Omit<Recipe, '_id'>)
+        .subscribe({
+          next: (newRecipe) => {
+            console.log('Nueva receta creada:', newRecipe);
+            this.form.reset(); // Resetear formulario
+            this.selectedCategories = []; // Limpiar categorías
+            this.router.navigate(['/recipes']);
+          },
+          error: (err) => {
+            console.error('Error creando:', err);
+            alert('Error al crear receta');
+          },
+        });
     }
   }
 
