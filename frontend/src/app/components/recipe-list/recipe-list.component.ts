@@ -135,7 +135,7 @@ export class RecipeListComponent {
   }
 
   // Métodos de carga de datos
-  public loadRecipes(): void {
+  loadRecipes(): void {
     this.loading.set(true);
     const params = {
       page: this.currentPage(),
@@ -143,7 +143,8 @@ export class RecipeListComponent {
       q: this.searchQuery.trim(),
       categories: this.selectedCategories,
     };
-
+  
+    // Forzar recarga ignorando caché
     this.recipeService.getRecipes(params).subscribe({
       next: (response) => {
         this.recetas.set(response.data);
